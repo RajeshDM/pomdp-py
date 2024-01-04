@@ -135,3 +135,6 @@ Thumbs.db
 #############################
 *.alpha
 *.pg
+
+#OUTPUT files of runs for debug purposes
+*.out

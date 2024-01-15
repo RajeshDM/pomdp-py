@@ -78,14 +78,14 @@ def _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orienta
         if objid in prior:
             # prior knowledge provided. Just use the prior knowledge
             for pose in prior[objid]:
-                state = ObjectState(objid, "target", pose)
+                state = ManipObjectState(objid, "target", pose)
                 hist[state] = prior[objid][pose]
                 total_prob += hist[state]
         else:
             # no prior knowledge. So uniform.
             for x in range(width):
                 for y in range(length):
-                    state = ObjectState(objid, "target", (x,y))
+                    state = ManipObjectState(objid, "target", (x,y))
                     hist[state] = 1.0
                     total_prob += hist[state]
 
@@ -101,7 +101,7 @@ def _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orienta
     assert robot_id in prior, "Missing initial robot pose in prior."
     init_robot_pose = list(prior[robot_id].keys())[0]
     oo_hists[robot_id] =\
-        pomdp_py.Histogram({RobotState(robot_id, init_robot_pose, (), None): 1.0})
+        pomdp_py.Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
         
     return MosOOBelief(robot_id, oo_hists)
 
@@ -127,12 +127,12 @@ def _initialize_particles_belief(dim, robot_id, object_ids, prior,
     oo_particles = {}  # objid -> Particageles
     width, length = dim
     for objid in object_ids:
-        particles = [RobotState(robot_id, init_robot_pose, (), None)]  # list of states; Starting the observable robot state.
+        particles = [ManipRobotState(robot_id, init_robot_pose, (), None)]  # list of states; Starting the observable robot state.
         if objid in prior:
             # prior knowledge provided. Just use the prior knowledge
             prior_sum = sum(prior[objid][pose] for pose in prior[objid])
             for pose in prior[objid]:
-                state = ObjectState(objid, "target", pose)
+                state = ManipObjectState(objid, "target", pose)
                 amount_to_add = (prior[objid][pose] / prior_sum) * num_particles
                 for _ in range(amount_to_add):
                     particles.append(state)
@@ -141,7 +141,7 @@ def _initialize_particles_belief(dim, robot_id, object_ids, prior,
             for _ in range(num_particles):
                 x = random.randrange(0, width)
                 y = random.randrange(0, length)
-                state = ObjectState(objid, "target", (x,y))
+                state = ManipObjectState(objid, "target", (x,y))
                 particles.append(state)
 
         particles_belief = pomdp_py.Particles(particles)

@@ -34,27 +34,75 @@ class ObjectState(pomdp_py.ObjectState):
     def objid(self):
         return self.attributes['id']
 
-class RobotState(pomdp_py.ObjectState):
+###### Manipulation capable States ######
+class ManipObjectState(pomdp_py.ObjectState):
+    def __init__(self, objid, objclass, pose, other_attrs = None):
+        if objclass != "obstacle" and objclass != "target":
+            raise ValueError("Only allow object class to be"\
+                             "either 'target' or 'obstacle'."
+                             "Got %s" % objclass)
+
+        all_attrs = {"pose":pose, "id":objid}
+
+        if other_attrs is None or "is_held" not in other_attrs:
+            all_attrs.update({"is_held" : False})
+        
+        if other_attrs != None :
+            all_attrs.update(other_attrs)
+
+        super().__init__(objclass, all_attrs)
+    def __str__(self):
+        return 'ManipObjectState(%s,%s,%s)' % (str(self.objclass), str(self.pose), str(self.is_held))
+    @property
+    def pose(self):
+        return self.attributes['pose']
+    @pose.setter
+    def pose(self,value):
+        self.attributes['pose'] = value
+
+    @property
+    def objid(self):
+        return self.attributes['id']
+
+    @property
+    def is_held(self):
+        return self.attributes['is_held']
+    @is_held.setter
+    def is_held(self, is_held_val):
+        self.attributes['is_held'] = is_held_val
+
+class ManipRobotState(pomdp_py.ObjectState):
     def __init__(self, robot_id, pose, objects_found, camera_direction):
         """Note: camera_direction is None unless the robot is looking at a direction,
         in which case camera_direction is the string e.g. look+x, or 'look'"""
         super().__init__("robot", {"id":robot_id,
                                    "pose":pose,  # x,y,th
                                    "objects_found": objects_found,
-                                   "camera_direction": camera_direction})
+                                   "camera_direction": camera_direction,
+                                   "objects_picked" : 0})
     def __str__(self):
-        return 'RobotState(%s,%s|%s)' % (str(self.objclass), str(self.pose), str(self.objects_found))
+        return 'ManipRobotState(%s,%s|%s|%s)' % (str(self.objclass), str(self.pose), \
+                                         str(self.objects_found), str(self.objects_picked))
     def __repr__(self):
         return str(self)
     @property
     def pose(self):
         return self.attributes['pose']
+
     @property
     def robot_pose(self):
         return self.attributes['pose']
+
     @property
     def objects_found(self):
         return self.attributes['objects_found']
+    @property
+    def objects_picked(self):
+        return self.attributes['objects_picked']
+    @property
+    def camera_direction(self):
+        return self.attributes['camera_direction']
+    
 
 class MosOOState(pomdp_py.OOState):
     def __init__(self, object_states):
@@ -63,6 +111,8 @@ class MosOOState(pomdp_py.OOState):
         return self.object_states[objid]["pose"]
     def pose(self, objid):
         return self.object_pose(objid)
+    def is_held(self,objid):
+        return self.object_states[objid]['is_held']
     @property
     def object_poses(self):
         return {objid:self.object_states[objid]['pose']

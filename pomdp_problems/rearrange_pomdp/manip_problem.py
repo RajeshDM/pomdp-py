@@ -1,19 +1,20 @@
-"""2D Multi-Object Search (MOS) Task.
+"""2D Multi-Object Search (MOS) + manipulation Task.
 Uses the domain, models, and agent/environment
 to actually define the POMDP problem for multi-object search.
-Then, solve it using POUCT or POMCP."""
+Then, solve it using POUCT or POMCP"""
 import pomdp_py
-from pomdp_problems.multi_object_search.env.env import *
-from pomdp_problems.multi_object_search.env.visual import *
-from pomdp_problems.multi_object_search.agent.agent import *
-from pomdp_problems.multi_object_search.example_worlds import *
-from pomdp_problems.multi_object_search.domain.observation import *
-from pomdp_problems.multi_object_search.models.components.grid_map import *
+from pomdp_problems.rearrange_pomdp.env.env import *
+from pomdp_problems.rearrange_pomdp.env.visual import *
+from pomdp_problems.rearrange_pomdp.agent.agent import *
+from pomdp_problems.rearrange_pomdp.example_worlds import *
+from pomdp_problems.rearrange_pomdp.domain.observation import *
+from pomdp_problems.rearrange_pomdp.models.components.grid_map import *
 import argparse
 import time
 import random
+from icecream import ic
 
-class MosOOPOMDP(pomdp_py.OOPOMDP):
+class ManipOOPOMDP(pomdp_py.OOPOMDP):
     """
     A MosOOPOMDP is instantiated given a string description
     of the search world, sensor descriptions for robots,
@@ -65,7 +66,7 @@ class MosOOPOMDP(pomdp_py.OOPOMDP):
             worldstr = equip_sensors(grid_map, sensors)
             dim, robots, objects, obstacles, sensors = interpret(worldstr)
             init_state = MosOOState({**objects, **robots})
-            env = MosEnvironment(dim,
+            env = ManipEnvironment(dim,
                           init_state, sensors,
                           obstacles=obstacles)
 
@@ -214,6 +215,7 @@ def solve(problem,
 
     _time_used = 0
     _find_actions_count = 0
+    _pick_actions_count = 0
     _total_reward = 0  # total, undiscounted reward
     for i in range(max_steps):
         # Plan action
@@ -244,12 +246,18 @@ def solve(problem,
         _total_reward += reward
         if isinstance(real_action, FindAction):
             _find_actions_count += 1
+        if isinstance(real_action,PickAction):
+            _pick_actions_count += 1
         print("==== Step %d ====" % (i+1))
         print("Action: %s" % str(real_action))
         print("Observation: %s" % str(real_observation))
         print("Reward: %s" % str(reward))
         print("Reward (Cumulative): %s" % str(_total_reward))
         print("Find Actions Count: %d" %  _find_actions_count)
+        print("Pick Actions Count: %d" % _pick_actions_count)
+
+        ic (problem.env.state.object_states[robot_id]['objects_picked'])
+
         if isinstance(planner, pomdp_py.POUCT):
             print("__num_sims__: %d" % planner.last_num_sims)
 
@@ -272,11 +280,14 @@ def solve(problem,
 
         # Termination check
         if set(problem.env.state.object_states[robot_id].objects_found)\
-           == problem.env.target_objects:
+           == problem.env.target_objects :# and \
+            #problem.env.state.object_states[robot_id].objects_picked \
+            #== len(problem.env.target_objects):
             print("Done!")
             break
-        if _find_actions_count >= len(problem.env.target_objects):
-            print("FindAction limit reached.")
+        if _find_actions_count >= len(problem.env.target_objects):# \
+            #and _pick_actions_count >= len(problem.env.target_objects):
+            print("FindAction limit reached, pick actions currently not checked limit limit reached.")
             break
         if _time_used > max_time:
             print("Maximum time reached.")
@@ -285,10 +296,11 @@ def solve(problem,
 # Test
 def unittest():
     # random world
-    grid_map, robot_char = random_world(10, 10, 5, 10)
+    seed = 10
+    grid_map, robot_char = random_world(10, 10, 5, 10,seed=seed)
     laserstr = make_laser_sensor(90, (1, 4), 0.5, False)
     proxstr = make_proximity_sensor(4, False)
-    problem = MosOOPOMDP(robot_char,  # r is the robot character
+    problem = ManipOOPOMDP(robot_char,  # r is the robot character
                          sigma=0.05,  # observation model parameter
                          epsilon=0.95, # observation model parameter
                          grid_map=grid_map,
@@ -300,9 +312,20 @@ def unittest():
           discount_factor=0.99,
           planning_time=1.,
           exploration_const=1000,
-          visualize=True,
+          #visualize=True,
+          visualize=False,
           max_time=120,
-          max_steps=500)
+          max_steps=5000)
+
+    print_stats(problem)
+
+def print_stats(problem):
+    ic (problem)
+    robot_id = problem.agent.robot_id
+    ic (set(problem.env.state.object_states[robot_id].objects_found))
+    ic (problem.env.target_objects)
+    ic (len(problem.env.target_objects))
 
 if __name__ == "__main__":
     unittest()
+

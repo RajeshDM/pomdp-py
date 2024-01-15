@@ -10,6 +10,8 @@ Transition: deterministic
 """
 import pomdp_py
 import copy
+import random
+from icecream import ic
 from pomdp_problems.rearrange_pomdp.domain.state import *
 from pomdp_problems.rearrange_pomdp.domain.observation import *
 from pomdp_problems.rearrange_pomdp.domain.action import *
@@ -34,6 +36,9 @@ class MosTransitionModel(pomdp_py.OOTransitionModel):
                              for objid in object_ids
                              if objid not in sensors}
         for robot_id in sensors:
+            #I have pretty much changed the name of the robot transition model 
+            #Not made any true code changes - just did do nothing on pick
+            # so for change back, just have to change name
             transition_models[robot_id] = RobotTransitionModel(sensors[robot_id],
                                                                dim,
                                                                epsilon=epsilon)
@@ -67,8 +72,92 @@ class StaticObjectTransitionModel(pomdp_py.TransitionModel):
         """Returns the most likely next object_state"""
         return copy.deepcopy(state.object_states[self._objid])
 
+class ManipObjectTransitionModel(pomdp_py.TransitionModel):
+    """This model assumes the object can be manipulated."""
+    def __init__(self, objid, epsilon=1e-9):
+        self._objid = objid
+        self._epsilon = epsilon
+
+    def probability(self, next_object_state, state, action):
+        is_next_state_not_same = next_object_state != state.object_states[next_object_state['id']]
+        p_succ = self.get_pick_action_success_prob(state)
+        if isinstance (action , PickAction):
+            if is_next_state_not_same : 
+                return p_succ
+            else :
+                return 1 - p_succ
+        else :
+            if is_next_state_not_same: 
+                return self._epsilon
+            else:
+                return 1.0 - self._epsilon
     
-class RobotTransitionModel(pomdp_py.TransitionModel):
+    def sample(self, state, action):
+        """Returns next_object_state"""
+        return self.argmax(state, action)
+    
+    def argmax(self, state, action):
+        """Returns the most likely next object_state"""
+        """ TODO a.1: Need to take care of applying pick action 
+        in the wrong state somewhere - looks like it is here itself so"""
+        p_succ = self.get_pick_action_success_prob(state)
+        new_state = copy.deepcopy(state.object_states[self._objid])
+        if isinstance(action, PickAction):
+
+            #going through all objects and finding the one robot state object
+            #Might need a better way in future but for now, this is what we got
+            for obj, obj_instance in state.object_states.items():
+                if isinstance(obj_instance,ManipRobotState):
+                    robot_state = copy.deepcopy(obj_instance)
+                    break
+
+            #if robot_state.camera_direction
+            #Need to check if the object is actually 
+            #even visible from where the agent is
+            curr_prob = random.uniform(0,1)
+            if curr_prob <= p_succ : 
+                new_state.is_held = True
+                #This might cause some valid pose issue - check it out
+                #new_state.pose = (-1000,-1000)
+
+        return new_state
+
+    def get_pick_action_success_prob(self,state):
+        """ TODO a.2 : Maybe add here if the agent is too far away from the obj,
+          prob = 0, somehow need to get robot state in here - robot dist and 
+          angle should be able to give a very good basic function"""
+        return 0.9
+
+####### Transition Model #######
+class ManipTransitionModel(pomdp_py.OOTransitionModel):
+    """Object-oriented transition model which is capable of object manipulation; 
+    """
+    def __init__(self,
+                 dim, sensors, object_ids,
+                 epsilon=1e-9):
+        """
+        sensors (dict): robot_id -> Sensor
+        for_env (bool): True if this is a robot transition model used by the
+             Environment.  see RobotManipTransitionModel for details.
+        """
+        transition_models = {objid: ManipObjectTransitionModel(objid, epsilon=epsilon)
+                             for objid in object_ids
+                             if objid not in sensors}
+        for robot_id in sensors:
+            transition_models[robot_id] = RobotManipTransitionModel(sensors[robot_id],
+                                                               dim,
+                                                               epsilon=epsilon)
+        super().__init__(transition_models)
+
+    def sample(self, state, action, **kwargs):
+        oostate = pomdp_py.OOTransitionModel.sample(self, state, action, **kwargs)
+        return MosOOState(oostate.object_states)
+
+    def argmax(self, state, action, normalized=False, **kwargs):
+        oostate = pomdp_py.OOTransitionModel.argmax(self, state, action, **kwargs)
+        return MosOOState(oostate.object_states)
+    
+class RobotManipTransitionModel(pomdp_py.TransitionModel):
     """We assume that the robot control is perfect and transitions are deterministic."""
     def __init__(self, sensor, dim, epsilon=1e-9):
         """
@@ -120,7 +209,7 @@ class RobotTransitionModel(pomdp_py.TransitionModel):
 
     def argmax(self, state, action):
         """Returns the most likely next robot_state"""
-        if isinstance(state, RobotState):
+        if isinstance(state, ManipRobotState):
             robot_state = state
         else:
             robot_state = state.object_states[self._robot_id]
@@ -131,7 +220,7 @@ class RobotTransitionModel(pomdp_py.TransitionModel):
         if isinstance(action, MotionAction):
             # motion action
             next_robot_state['pose'] = \
-                RobotTransitionModel.if_move_by(self._robot_id,
+                RobotManipTransitionModel.if_move_by(self._robot_id,
                                                 state, action, self._dim)
         elif isinstance(action, LookAction):
             if hasattr(action, "motion") and action.motion is not None:
@@ -150,6 +239,15 @@ class RobotTransitionModel(pomdp_py.TransitionModel):
                                            and z.objposes[objid] != ObjectObservation.NULL)}
             next_robot_state["objects_found"] = tuple(set(next_robot_state['objects_found'])\
                                                       | set(observed_target_objects))
+        elif isinstance(action, PickAction):
+            #Do no change to robot if pick action is executed - This is for current 
+            #pick POMDP only - which can hold n objects. later this will change
+            next_robot_state["objects_picked"] = 0
+            for objs, obj_instance in state.object_states.items():
+                if isinstance(obj_instance, ManipRobotState):
+                    continue
+                if obj_instance.is_held == True :
+                    next_robot_state["objects_picked"] += 1 
         return next_robot_state
     
     def sample(self, state, action):

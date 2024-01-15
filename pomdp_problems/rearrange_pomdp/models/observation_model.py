@@ -101,7 +101,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
                 "Robot id of observation model mismatch with given state"
             robot_pose = next_robot_state.pose
 
-            if isinstance(next_state, ObjectState):
+            if isinstance(next_state, ManipObjectState):
                 assert next_state["id"] == self._objid,\
                     "Object id of observation model mismatch with given state"
                 object_pose = next_state.pose

@@ -1,0 +1,24 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "rearrange_pomdp_main",
+            "type": "python",
+            "request": "launch",
+            "program": "/Users/rajesh/Rajesh/Subjects/Research/rearrangement_pomdp/pomdp-py/pomdp_problems/rearrange_pomdp/manip_problem.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
+        }
+    ]
+}

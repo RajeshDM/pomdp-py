@@ -21,14 +21,14 @@ class MosEnvironment(pomdp_py.Environment):
         self.width, self.length = dim
         self.sensors = sensors
         self.obstacles = obstacles
-        transition_model = MosTransitionModel(dim,
+        transition_model = ManipTransitionModel(dim,
                                               sensors,
                                               set(init_state.object_states.keys()))
         # Target objects, a set of ids, are not robot nor obstacles
         self.target_objects = \
             {objid
              for objid in set(init_state.object_states.keys()) - self.obstacles
-             if not isinstance(init_state.object_states[objid], RobotState)}
+             if not isinstance(init_state.object_states[objid], ManipRobotState)}
         reward_model = GoalRewardModel(self.target_objects)
         super().__init__(init_state,
                          transition_model,
@@ -61,6 +61,77 @@ class MosEnvironment(pomdp_py.Environment):
         next_state = copy.deepcopy(self.state)
         next_state.object_states[robot_id] =\
             self.transition_model[robot_id].sample(self.state, action)
+        
+        reward = self.reward_model.sample(self.state, action, next_state,
+                                          robot_id=robot_id)
+        if execute:
+            self.apply_transition(next_state)
+            return reward
+        else:
+            return next_state, reward        
+
+class ManipEnvironment(pomdp_py.Environment):
+    """"""
+    def __init__(self, dim, init_state, sensors, obstacles=set({})):
+        """
+        Args:
+            sensors (dict): Map from robot_id to sensor (Sensor);
+                            Sensors equipped on robots; Used to determine
+                            which objects should be marked as found.
+            obstacles (set): set of object ids that are obstacles;
+                                The set difference of all object ids then
+                                yields the target object ids."""
+        self.width, self.length = dim
+        self.sensors = sensors
+        self.obstacles = obstacles
+        transition_model = ManipTransitionModel(dim,
+                                              sensors,
+                                              set(init_state.object_states.keys()))
+        # Target objects, a set of ids, are not robot nor obstacles
+        self.target_objects = \
+            {objid
+             for objid in set(init_state.object_states.keys()) - self.obstacles
+             if not isinstance(init_state.object_states[objid], ManipRobotState)}
+        reward_model = GoalRewardModel(self.target_objects)
+        super().__init__(init_state,
+                         transition_model,
+                         reward_model)
+        
+    @property
+    def robot_ids(self):
+        return set(self.sensors.keys())
+
+    def state_transition(self, action, execute=True, robot_id=None):
+        """state_transition(self, action, execute=True, **kwargs)
+
+        Overriding parent class function.
+        Simulates a state transition given `action`. If `execute` is set to True,
+        then the resulting state will be the new current state of the environment.
+
+        Args:
+            action (Action): action that triggers the state transition
+            execute (bool): If True, the resulting state of the transition will
+                            become the current state.
+
+        Returns:
+            float or tuple: reward as a result of `action` and state
+            transition, if `execute` is True (next_state, reward) if `execute`
+            is False.
+
+        """
+        assert robot_id is not None, "state transition should happen for a specific robot"
+
+        next_state = copy.deepcopy(self.state)
+        #sampled_next_state = self.transition_model[robot_id].sample(self.state,action)
+
+        '''
+        TODO : e.1 : Check why the whole state was being stored as part of robot state 
+        and see if the same is happening for all objects - check complete 
+        - only robot state was being stored, the transition function get_item was calling
+        the respective function
+        '''
+
+        next_state = self.transition_model.sample(self.state,action)
         
         reward = self.reward_model.sample(self.state, action, next_state,
                                           robot_id=robot_id)
@@ -135,18 +206,18 @@ def interpret(worldstr):
             if c == "x":
                 # obstacle
                 objid = 1000 + len(obstacles)  # obstacle id
-                objects[objid] = ObjectState(objid, "obstacle", (x,y))
+                create_obj_with_id(objects,objid,obj_class='obstacle', x=x,y=y)
                 obstacles.add(objid)
                 
             elif c.isupper():
                 # target object
                 objid = len(objects)
-                objects[objid] = ObjectState(objid, "target", (x,y))
+                create_obj_with_id(objects,objid, obj_class='target', x=x,y=y)
                 
             elif c.islower():
                 # robot
                 robot_id = interpret_robot_id(c)
-                robots[robot_id] = RobotState(robot_id, (x,y,0), (), None)
+                robots[robot_id] = ManipRobotState(robot_id, (x,y,0), (), None)
 
             else:
                 assert c == ".", "Unrecognized character %s in worldstr" % c
@@ -184,6 +255,8 @@ def interpret(worldstr):
 def interpret_robot_id(robot_name):
     return -ord(robot_name)
 
+def create_obj_with_id(objects,objid,obj_class, x,y):
+    objects[objid] = ManipObjectState(objid, obj_class, (x,y))
 
 #### Utility functions for building the worldstr ####
 def equip_sensors(worldmap, sensors):

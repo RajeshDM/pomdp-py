@@ -2,8 +2,9 @@
 
 import pomdp_py
 from pomdp_problems.rearrange_pomdp.domain.action import *
+from pomdp_problems.rearrange_pomdp.domain.state import *
 
-class MosRewardModel(pomdp_py.RewardModel):
+class ManipRewardModel(pomdp_py.RewardModel):
     def __init__(self, target_objects, big=1000, small=1, robot_id=None):
         """
         robot_id (int): This model is the reward for one agent (i.e. robot),
@@ -16,6 +17,7 @@ class MosRewardModel(pomdp_py.RewardModel):
         self._target_objects = target_objects
         
     def probability(self, reward, state, action, next_state, normalized=False, **kwargs):
+        # TODO : r.1 This function needs to change - I am not yet sure no how to change it though
         if reward == self._reward_func(state, action):
             return 1.0
         else:
@@ -30,9 +32,10 @@ class MosRewardModel(pomdp_py.RewardModel):
         """Returns the most likely reward"""
         return self._reward_func(state, action, next_state, robot_id=robot_id)
 
-class GoalRewardModel(MosRewardModel):
+class GoalRewardModel(ManipRewardModel):
     """
     This is a reward where the agent gets reward only for detect-related actions.
+    EDIT: Updated to reward pick related actions as well
     """
     def _reward_func(self, state, action, next_state, robot_id=None):
         if robot_id is None:
@@ -65,5 +68,25 @@ class GoalRewardModel(MosRewardModel):
                 else:
                     # Has new detection. Award.
                     reward += self.big
+        elif isinstance(action, PickAction):
+            change_in_held = 0
+            for objid, next_object_state in next_state.object_states.items() : 
+                if isinstance(next_object_state,ManipRobotState):
+                    continue
+                if state.object_states[objid].is_held is False and \
+                    next_object_state.is_held is True :
+                    change_in_held += 1
+                    #Ideally not required for logic since at max only 1 can have this, 
+                    #but adding break for speeding up
+                    break
+
+            if change_in_held == 1 :
+                '''
+                If an object was actually picked up while trying the pick action, 
+                then it is a good thing to do
+                '''
+                reward += self.big
+            else :
+                reward -= self.big
+
         return reward
-    

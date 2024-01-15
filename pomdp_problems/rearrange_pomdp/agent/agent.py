@@ -41,7 +41,7 @@ class MosAgent(pomdp_py.Agent):
                                         representation=belief_rep,
                                         robot_orientations={self.robot_id:rth},
                                         num_particles=num_particles)
-        transition_model = MosTransitionModel(dim,
+        transition_model = ManipTransitionModel(dim,
                                               {self.robot_id: self.sensor},
                                               self._object_ids)
         observation_model = MosObservationModel(dim,

@@ -76,7 +76,9 @@ world3 = (
 """, "r")
 
 def random_world(width, length, num_obj, num_obstacles,
-                 robot_char="r"):
+                 robot_char="r", seed=10):
+    
+    random.seed(seed)
     worldstr = [[ "." for i in range(width)] for j in range(length)]
     # First place obstacles
     num_obstacles_placed = 0

@@ -78,9 +78,19 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
         self._objid = objid
         self._epsilon = epsilon
 
-    def probability(self, next_object_state, state, action):
-        is_next_state_not_same = next_object_state != state.object_states[next_object_state['id']]
-        p_succ = self.get_pick_action_success_prob(state)
+    def probability(self, next_object_state, state, action, robot_state=None):
+        if isinstance(state, MosOOState):
+            is_next_state_not_same = next_object_state != state.object_states[next_object_state['id']]
+            robot_state = self.get_robot_state_from_full_state(state)
+            p_succ = self.get_pick_action_success_prob(state.object_states[next_object_state['id']],robot_state)
+        elif isinstance(state,ManipObjectState) :
+            is_next_state_not_same = next_object_state != state
+            p_succ = self.get_pick_action_success_prob(state,robot_state)
+        else :
+            raise TypeError(f"Unexpected state type - it has to be MosState or ObjectState"\
+                             f"but instead got {type(state)}")
+        
+
         if isinstance (action , PickAction):
             if is_next_state_not_same : 
                 return p_succ
@@ -92,28 +102,28 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
             else:
                 return 1.0 - self._epsilon
     
-    def sample(self, state, action):
+    def sample(self, state, action,robot_state=None):
         """Returns next_object_state"""
-        return self.argmax(state, action)
-    
-    def argmax(self, state, action):
+        return self.argmax(state, action,robot_state)
+
+    def argmax(self, state, action,robot_state=None):
         """Returns the most likely next object_state"""
         """ TODO a.1: Need to take care of applying pick action 
         in the wrong state somewhere - looks like it is here itself so"""
-        p_succ = self.get_pick_action_success_prob(state)
-        new_state = copy.deepcopy(state.object_states[self._objid])
+        #new_state = copy.deepcopy(state.object_states[self._objid])
+        if isinstance(state,ManipObjectState) :
+            new_state = copy.deepcopy(state)
+        else :
+            new_state = copy.deepcopy(state.object_states[self._objid])
+            robot_state = self.get_robot_state_from_full_state(state) 
+            #state = copy.deepcopy(state.object_states[self._objid])
+
         if isinstance(action, PickAction):
+            p_succ = self.get_pick_action_success_prob(new_state,robot_state)
 
-            #going through all objects and finding the one robot state object
-            #Might need a better way in future but for now, this is what we got
-            for obj, obj_instance in state.object_states.items():
-                if isinstance(obj_instance,ManipRobotState):
-                    robot_state = copy.deepcopy(obj_instance)
-                    break
+            if action.obj_id != self._objid :
+                return new_state
 
-            #if robot_state.camera_direction
-            #Need to check if the object is actually 
-            #even visible from where the agent is
             curr_prob = random.uniform(0,1)
             if curr_prob <= p_succ : 
                 new_state.is_held = True
@@ -122,11 +132,29 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
 
         return new_state
 
-    def get_pick_action_success_prob(self,state):
+    def get_robot_state_from_full_state(self,state):
+        #going through all objects and finding the one robot state object
+        #Might need a better way in future but for now, this is what we got
+        if not isinstance(state,MosOOState):
+            raise TypeError(f"Expected MosOOState, got {type(state)}")
+        for obj, obj_instance in state.object_states.items():
+            if isinstance(obj_instance,ManipRobotState):
+                robot_state = copy.deepcopy(obj_instance)
+                return robot_state
+
+        raise ValueError("Robot state not found in current state")
+
+    def get_pick_action_success_prob(self,object_state,robot_state):
         """ TODO a.2 : Maybe add here if the agent is too far away from the obj,
-          prob = 0, somehow need to get robot state in here - robot dist and 
-          angle should be able to give a very good basic function"""
-        return 0.9
+          prob = 0, 
+          a.3 somehow need to get robot state in here - robot dist and 
+          angle should be able to give a very good basic function - DONE
+          """
+        #return 0.99999999
+        #if robot_state.camera_direction
+        #Need to check if the object is actually 
+        #even visible from where the agent is
+        return 1 - self._epsilon
 
 ####### Transition Model #######
 class ManipTransitionModel(pomdp_py.OOTransitionModel):
@@ -138,26 +166,55 @@ class ManipTransitionModel(pomdp_py.OOTransitionModel):
         """
         sensors (dict): robot_id -> Sensor
         for_env (bool): True if this is a robot transition model used by the
-             Environment.  see RobotManipTransitionModel for details.
+             Environment.  see ManipRobotTransitionModel for details.
         """
+        #self.absd = 10
         transition_models = {objid: ManipObjectTransitionModel(objid, epsilon=epsilon)
                              for objid in object_ids
                              if objid not in sensors}
         for robot_id in sensors:
-            transition_models[robot_id] = RobotManipTransitionModel(sensors[robot_id],
+            transition_models[robot_id] = ManipRobotTransitionModel(sensors[robot_id],
                                                                dim,
                                                                epsilon=epsilon)
         super().__init__(transition_models)
 
-    def sample(self, state, action, **kwargs):
-        oostate = pomdp_py.OOTransitionModel.sample(self, state, action, **kwargs)
-        return MosOOState(oostate.object_states)
+    def sample(self, state, action,argmax=False, **kwargs):
+        #oostate = pomdp_py.OOTransitionModel.sample(self, state, action, **kwargs)
+        #return MosOOState(oostate.object_states)
+        if not isinstance(state, MosOOState):
+            raise ValueError("state must be OOState")
+        object_states = {}
+        robot_id = None
+        for objid, obj_instance in state.object_states.items():
+            if objid not in self.transition_models:
+                # no transition model provided for this object. Then no transition happens.
+                object_states[objid] = copy.deepcopy(state.object_states[objid])
+                continue
+
+            if isinstance(obj_instance, ManipRobotState):
+                robot_id = objid
+                object_states[objid] = copy.deepcopy(obj_instance)
+                continue
+
+            if argmax:
+                next_object_state = self.transition_models[objid].argmax(state, action, **kwargs)
+            else:
+                next_object_state = self.transition_models[objid].sample(state, action, **kwargs)
+            object_states[objid] = next_object_state
+        next_state = MosOOState(object_states)
+
+        if argmax:
+            next_state.object_states[robot_id] = self.transition_models[robot_id].argmax(next_state,action,**kwargs)
+        else :
+            next_state.object_states[robot_id] = self.transition_models[robot_id].sample(next_state,action,**kwargs)
+
+        return next_state
 
     def argmax(self, state, action, normalized=False, **kwargs):
         oostate = pomdp_py.OOTransitionModel.argmax(self, state, action, **kwargs)
         return MosOOState(oostate.object_states)
     
-class RobotManipTransitionModel(pomdp_py.TransitionModel):
+class ManipRobotTransitionModel(pomdp_py.TransitionModel):
     """We assume that the robot control is perfect and transitions are deterministic."""
     def __init__(self, sensor, dim, epsilon=1e-9):
         """
@@ -220,7 +277,7 @@ class RobotManipTransitionModel(pomdp_py.TransitionModel):
         if isinstance(action, MotionAction):
             # motion action
             next_robot_state['pose'] = \
-                RobotManipTransitionModel.if_move_by(self._robot_id,
+                ManipRobotTransitionModel.if_move_by(self._robot_id,
                                                 state, action, self._dim)
         elif isinstance(action, LookAction):
             if hasattr(action, "motion") and action.motion is not None:
@@ -247,7 +304,9 @@ class RobotManipTransitionModel(pomdp_py.TransitionModel):
                 if isinstance(obj_instance, ManipRobotState):
                     continue
                 if obj_instance.is_held == True :
+                    #print ("Updating objects picked")
                     next_robot_state["objects_picked"] += 1 
+            pass
         return next_robot_state
     
     def sample(self, state, action):

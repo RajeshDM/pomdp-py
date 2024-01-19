@@ -6,6 +6,7 @@ grid map of the environment.
 import pomdp_py
 import random
 from pomdp_problems.rearrange_pomdp.domain.action import *
+from pomdp_problems.rearrange_pomdp.domain.state import *
 
 class PolicyModel(pomdp_py.RolloutPolicy):
     """Simple policy model. All actions are possible at any state."""
@@ -35,12 +36,31 @@ class PolicyModel(pomdp_py.RolloutPolicy):
             last_action = history[-1][0]
             if isinstance(last_action, LookAction):
                 can_find = True
-            if isinstance(last_action, FindAction):
+            if isinstance(last_action, FindAction) or \
+                isinstance(last_action,PickAction):
                 can_pick = True
         find_action = set({Find}) if can_find else set({})
-        pick_action = set({Pick}) if can_pick else set({})
+        #pick_action = set({Pick}) if can_pick else set({})
 
-        available_actions = {Look} | find_action | pick_action
+        pick_actions = set({})
+        if can_pick :
+            for obj, obj_instance in state.object_states.items():
+                if isinstance(obj_instance, ManipObjectState):
+                    if obj_instance.is_held is False :
+                        pick_actions.add(PickAction(obj_instance.objid))
+
+                    # TODO - p.1 
+                    # Will ADD this back when put down action is implemented
+                    # UNTIL THEN, we will assume robot can carry multiple items
+                    #elif obj_instance.is_held is True :
+                    #    pick_actions = set({})
+                    #    break
+                #elif isinstance(obj_instance,ManipRobotState):
+                #    if obj_instance.is_holding is True :    
+                #        pick_actions = set({})
+                #        break
+
+        available_actions = {Look} | find_action | pick_actions
         #available_actions = {Look} | find_action 
 
         if state is None :

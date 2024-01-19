@@ -1,6 +1,6 @@
 """Optional grid map to assist collision avoidance during planning."""
 
-from pomdp_problems.rearrange_pomdp.models.transition_model import RobotManipTransitionModel
+from pomdp_problems.rearrange_pomdp.models.transition_model import ManipRobotTransitionModel
 from pomdp_problems.rearrange_pomdp.domain.action import *
 from pomdp_problems.rearrange_pomdp.domain.state import *
 
@@ -21,7 +21,7 @@ class GridMap:
         self.length = length
         self._obstacles = obstacles
         # An MosOOState that only contains poses for obstacles;
-        # This is to allow calling RobotManipTransitionModel.if_move_by
+        # This is to allow calling ManipRobotTransitionModel.if_move_by
         # function.
         self._obstacle_states = {
             objid: ManipObjectState(objid, "obstacle", self._obstacles[objid])
@@ -47,7 +47,7 @@ class GridMap:
             if not isinstance(motion_action, MotionAction):
                 raise ValueError("This (%s) is not a motion action" % str(motion_action))
 
-            next_pose = RobotManipTransitionModel.if_move_by(robot_id, state,
+            next_pose = ManipRobotTransitionModel.if_move_by(robot_id, state,
                                                         motion_action, (self.width, self.length))
             if next_pose != robot_pose:
                 # robot moved --> valid motion

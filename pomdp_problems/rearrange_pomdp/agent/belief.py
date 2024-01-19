@@ -34,7 +34,8 @@ class MosOOBelief(pomdp_py.OOBelief):
 
 
 def initialize_belief(dim, robot_id, object_ids, prior={},
-                      representation="histogram", robot_orientations={}, num_particles=100):
+                      representation="histogram", robot_orientations={},
+                        num_particles=100, is_manip= False):
     """
     Returns a GenerativeDistribution that is the belief representation for
     the multi-object search problem.
@@ -57,6 +58,8 @@ def initialize_belief(dim, robot_id, object_ids, prior={},
     Returns:
         GenerativeDistribution: the initial belief representation.
     """
+    if representation == 'histogram' and is_manip is True:    
+        return _initialize_histogram_belief_manip(dim, robot_id, object_ids, prior, robot_orientations)
     if representation == "histogram":
         return _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orientations)
     elif representation == "particles":
@@ -88,6 +91,49 @@ def _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orienta
                     state = ManipObjectState(objid, "target", (x,y))
                     hist[state] = 1.0
                     total_prob += hist[state]
+
+        # Normalize
+        for state in hist:
+            hist[state] /= total_prob
+
+        hist_belief = pomdp_py.Histogram(hist)
+        oo_hists[objid] = hist_belief
+
+    # For the robot, we assume it can observe its own state;
+    # Its pose must have been provided in the `prior`.
+    assert robot_id in prior, "Missing initial robot pose in prior."
+    init_robot_pose = list(prior[robot_id].keys())[0]
+    oo_hists[robot_id] =\
+        pomdp_py.Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
+        
+    return MosOOBelief(robot_id, oo_hists)
+
+def _initialize_histogram_belief_manip(dim, robot_id, object_ids, prior, robot_orientations):
+    """
+    Returns the belief distribution represented as a histogram
+    """
+    oo_hists = {}  # objid -> Histogram
+    width, length = dim
+    for objid in object_ids:
+        hist = {}  # pose -> prob
+        total_prob = 0
+        if objid in prior:
+            other_attr = {'is_held': is_held}
+            # prior knowledge provided. Just use the prior knowledge
+            for is_held in [True, False]:
+                for pose in prior[objid]:
+                    state = ManipObjectState(objid, "target", pose,other_attr)
+                    hist[state] = prior[objid][pose][is_held]
+                    total_prob += hist[state]
+        else:
+            # no prior knowledge. So uniform.
+            for is_held in [True, False]:
+                other_attr = {'is_held': is_held}
+                for x in range(width):
+                    for y in range(length):
+                        state = ManipObjectState(objid, "target", (x,y), other_attr)
+                        hist[state] = 1.0
+                        total_prob += hist[state]
 
         # Normalize
         for state in hist:

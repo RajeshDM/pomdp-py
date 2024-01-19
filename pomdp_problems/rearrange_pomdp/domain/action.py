@@ -90,6 +90,12 @@ class MotionAction(Action):
         if motion_name is None:
             motion_name = str(motion)
         super().__init__("move-%s-%s" % (scheme, motion_name))
+
+
+class PickAction(Action):
+    def __init__(self, obj_id):
+        super().__init__("pick" + "_" +str(obj_id))
+        self.obj_id = obj_id
         
 # Define some constant actions
 MoveEast = MotionAction(MotionAction.EAST,   scheme=MotionAction.SCHEME_XYTH, motion_name="East")
@@ -117,13 +123,10 @@ class FindAction(Action):
     def __init__(self):
         super().__init__("find")
 
-class PickAction(Action):
-    def __init__(self):
-        super().__init__("pick")
 
 Look = LookAction()
 Find = FindAction()
-Pick = PickAction()
+#Pick = PickAction()
 
 if MOTION_SCHEME == "xy":
     ALL_MOTION_ACTIONS = {MoveEast, MoveWest, MoveNorth, MoveSouth}

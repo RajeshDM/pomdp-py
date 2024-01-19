@@ -3,6 +3,7 @@
 import pomdp_py
 from pomdp_problems.rearrange_pomdp.domain.action import *
 from pomdp_problems.rearrange_pomdp.domain.state import *
+from icecream import ic
 
 class ManipRewardModel(pomdp_py.RewardModel):
     def __init__(self, target_objects, big=1000, small=1, robot_id=None):
@@ -47,7 +48,12 @@ class GoalRewardModel(ManipRewardModel):
 
         # If the robot has detected all objects
         if len(state.object_states[robot_id]['objects_found'])\
-           == len(self._target_objects):
+           == len(self._target_objects) and \
+            state.object_states[robot_id].objects_picked \
+            == len(self._target_objects):
+            #print ("All objects found")
+            #print ("Found objs", state.object_states[robot_id]['objects_found'])
+            #print ("Picked objs", state.object_states[robot_id].objects_picked)
             return 0  # no reward or penalty; the task is finished.
         
         if isinstance(action, MotionAction):
@@ -79,6 +85,8 @@ class GoalRewardModel(ManipRewardModel):
                     #Ideally not required for logic since at max only 1 can have this, 
                     #but adding break for speeding up
                     break
+
+            #ic (action, change_in_held)
 
             if change_in_held == 1 :
                 '''

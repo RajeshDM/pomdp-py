@@ -79,15 +79,21 @@ class ManipRobotState(pomdp_py.ObjectState):
                                    "pose":pose,  # x,y,th
                                    "objects_found": objects_found,
                                    "camera_direction": camera_direction,
-                                   "objects_picked" : 0})
+                                   "objects_picked" : 0, 
+                                   "is_holding": False})
     def __str__(self):
-        return 'ManipRobotState(%s,%s|%s|%s)' % (str(self.objclass), str(self.pose), \
-                                         str(self.objects_found), str(self.objects_picked))
+        return 'ManipRobotState(%s,%s|%s|%s|%s)' % (str(self.objclass), str(self.pose), \
+                                         str(self.objects_found), str(self.objects_picked),\
+                                        str(self.is_holding))
     def __repr__(self):
         return str(self)
     @property
     def pose(self):
         return self.attributes['pose']
+
+    @property
+    def objid(self):
+        return self.attributes['id']
 
     @property
     def robot_pose(self):
@@ -102,6 +108,12 @@ class ManipRobotState(pomdp_py.ObjectState):
     @property
     def camera_direction(self):
         return self.attributes['camera_direction']
+
+    # Added this property but not using it atm - 
+    # It is being currently determined if any of the objects are being held
+    @property
+    def is_holding(self):
+        return self.attributes['is_holding']
     
 
 class MosOOState(pomdp_py.OOState):

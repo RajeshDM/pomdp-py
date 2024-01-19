@@ -161,6 +161,40 @@ def belief_update(agent, real_action, real_observation, next_robot_state, planne
 
             agent.cur_belief.set_object_belief(objid, new_belief)
 
+def belief_update_manip(agent, real_action, real_observation, next_robot_state, planner):
+    """Updates the agent's belief; The belief update may happen
+    through planner update (e.g. when planner is POMCP)."""
+    # Updates the planner; In case of POMCP, agent's belief is also updated.
+    planner.update(agent, real_action, real_observation)
+
+    # Update agent's belief, when planner is not POMCP
+    if not isinstance(planner, pomdp_py.POMCP):
+        # Update belief for every object
+        for objid in agent.cur_belief.object_beliefs:
+            belief_obj = agent.cur_belief.object_belief(objid)
+            if isinstance(belief_obj, pomdp_py.Histogram):
+                if objid == agent.robot_id:
+                    # Assuming the agent can observe its own state:
+                    new_belief = pomdp_py.Histogram({next_robot_state: 1.0})
+                else:
+                    next_state_space = set({})
+                    for state in belief_obj:
+                        next_state_belief = agent.transition_model[objid].sample(state,real_action,next_robot_state)
+                        next_state_space = next_state_space.update(next_state_belief)
+                    new_belief = pomdp_py.update_histogram_belief(belief_obj,
+                                                                  real_action,
+                                                                  real_observation.for_obj(objid),
+                                                                  agent.observation_model[objid],
+                                                                  agent.transition_model[objid],
+                                                                  # The agent knows the objects are static for now.
+                                                                  static_transition=True,
+                                                                  oargs={"next_robot_state": next_robot_state},
+                                                                  next_state_space=next_state_space)
+            else:
+                raise ValueError("Unexpected program state."\
+                                 "Are you using the appropriate belief representation?")
+
+            agent.cur_belief.set_object_belief(objid, new_belief)
 
 ### Solve the problem with POUCT/POMCP planner ###
 ### This is the main online POMDP solver logic ###
@@ -190,7 +224,9 @@ def solve(problem,
                                  discount_factor=discount_factor,
                                  planning_time=planning_time,
                                  exploration_const=exploration_const,
-                                 rollout_policy=problem.agent.policy_model)  # Random by default
+                                 rollout_policy=problem.agent.policy_model,
+                                )  # Random by default
+                                #num_sims=500)
     elif isinstance(random_object_belief, pomdp_py.Particles):
         # Use POMCP
         planner = pomdp_py.POMCP(max_depth=max_depth,
@@ -278,26 +314,33 @@ def solve(problem,
             viz.on_loop()
             viz.on_render()
 
+        if isinstance(real_action, PickAction) or isinstance(real_action, FindAction):
+            ic (problem.agent.policy_model.get_all_actions())
+
         # Termination check
         if set(problem.env.state.object_states[robot_id].objects_found)\
-           == problem.env.target_objects :# and \
-            #problem.env.state.object_states[robot_id].objects_picked \
-            #== len(problem.env.target_objects):
+           == problem.env.target_objects  and \
+            problem.env.state.object_states[robot_id].objects_picked \
+            == len(problem.env.target_objects):
             print("Done!")
             break
-        if _find_actions_count >= len(problem.env.target_objects):# \
-            #and _pick_actions_count >= len(problem.env.target_objects):
+        if _find_actions_count >= len(problem.env.target_objects) \
+            and _pick_actions_count >= len(problem.env.target_objects):
             print("FindAction limit reached, pick actions currently not checked limit limit reached.")
             break
         if _time_used > max_time:
             print("Maximum time reached.")
             break
 
+    print_stats(problem)
+
 # Test
 def unittest():
     # random world
     seed = 10
     grid_map, robot_char = random_world(10, 10, 5, 10,seed=seed)
+    #ic (grid_map)
+    #exit()
     laserstr = make_laser_sensor(90, (1, 4), 0.5, False)
     proxstr = make_proximity_sensor(4, False)
     problem = ManipOOPOMDP(robot_char,  # r is the robot character
@@ -317,7 +360,6 @@ def unittest():
           max_time=120,
           max_steps=5000)
 
-    print_stats(problem)
 
 def print_stats(problem):
     ic (problem)

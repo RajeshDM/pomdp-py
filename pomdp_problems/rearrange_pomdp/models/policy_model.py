@@ -80,20 +80,5 @@ class PolicyModel(pomdp_py.RolloutPolicy):
 
         return available_actions
 
-        #REMOVE AFTER TESTING
-        '''
-        if state is None:
-            return ALL_MOTION_ACTIONS | {Look} | find_action | pick_action
-        else:
-            if self._grid_map is not None:
-                valid_motions =\
-                    self._grid_map.valid_motions(self.robot_id,
-                                                 state.pose(self.robot_id),
-                                                 ALL_MOTION_ACTIONS)
-                return valid_motions | {Look} | find_action | pick_action
-            else:
-                return ALL_MOTION_ACTIONS | {Look} | find_action | pick_action
-        '''
-
     def rollout(self, state, history=None):
         return random.sample(self.get_all_actions(state=state, history=history), 1)[0]

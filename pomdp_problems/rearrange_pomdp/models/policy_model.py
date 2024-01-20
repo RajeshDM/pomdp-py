@@ -7,6 +7,7 @@ import pomdp_py
 import random
 from pomdp_problems.rearrange_pomdp.domain.action import *
 from pomdp_problems.rearrange_pomdp.domain.state import *
+from pomdp_problems.rearrange_pomdp.models.utils import get_robot_state_from_full_state
 
 class PolicyModel(pomdp_py.RolloutPolicy):
     """Simple policy model. All actions are possible at any state."""
@@ -44,9 +45,10 @@ class PolicyModel(pomdp_py.RolloutPolicy):
 
         pick_actions = set({})
         if can_pick :
+            robot_state = get_robot_state_from_full_state(state)
             for obj, obj_instance in state.object_states.items():
                 if isinstance(obj_instance, ManipObjectState):
-                    if obj in set(state.object_states[robot_id].objects_found) :
+                    if obj in set(robot_state.objects_found) :
                         if obj_instance.is_held is False :
                             pick_actions.add(PickAction(obj_instance.objid))
 

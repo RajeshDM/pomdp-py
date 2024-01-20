@@ -15,6 +15,7 @@ from icecream import ic
 from pomdp_problems.rearrange_pomdp.domain.state import *
 from pomdp_problems.rearrange_pomdp.domain.observation import *
 from pomdp_problems.rearrange_pomdp.domain.action import *
+from pomdp_problems.rearrange_pomdp.models.utils import get_robot_state_from_full_state
 
 ####### Transition Model #######
 class MosTransitionModel(pomdp_py.OOTransitionModel):
@@ -81,7 +82,7 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
     def probability(self, next_object_state, state, action, robot_state=None):
         if isinstance(state, MosOOState):
             is_next_state_not_same = next_object_state != state.object_states[next_object_state['id']]
-            robot_state = self.get_robot_state_from_full_state(state)
+            robot_state = get_robot_state_from_full_state(state)
             p_succ = self.get_pick_action_success_prob(state.object_states[next_object_state['id']],robot_state)
         elif isinstance(state,ManipObjectState) :
             is_next_state_not_same = next_object_state != state
@@ -115,7 +116,7 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
             new_state = copy.deepcopy(state)
         else :
             new_state = copy.deepcopy(state.object_states[self._objid])
-            robot_state = self.get_robot_state_from_full_state(state) 
+            robot_state = get_robot_state_from_full_state(state) 
             #state = copy.deepcopy(state.object_states[self._objid])
 
         if isinstance(action, PickAction):
@@ -131,18 +132,6 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
                 #new_state.pose = (-1000,-1000)
 
         return new_state
-
-    def get_robot_state_from_full_state(self,state):
-        #going through all objects and finding the one robot state object
-        #Might need a better way in future but for now, this is what we got
-        if not isinstance(state,MosOOState):
-            raise TypeError(f"Expected MosOOState, got {type(state)}")
-        for obj, obj_instance in state.object_states.items():
-            if isinstance(obj_instance,ManipRobotState):
-                robot_state = copy.deepcopy(obj_instance)
-                return robot_state
-
-        raise ValueError("Robot state not found in current state")
 
     def get_pick_action_success_prob(self,object_state,robot_state):
         """ TODO a.2 : Maybe add here if the agent is too far away from the obj,

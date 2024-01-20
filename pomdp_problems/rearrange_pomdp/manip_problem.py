@@ -180,7 +180,7 @@ def belief_update_manip(agent, real_action, real_observation, next_robot_state, 
                     next_state_space = set({})
                     for state in belief_obj:
                         next_state_belief = agent.transition_model[objid].sample(state,real_action,next_robot_state)
-                        next_state_space.update(next_state_belief)
+                        next_state_space.update(set({next_state_belief}))
                     new_belief = pomdp_py.update_histogram_belief(belief_obj,
                                                                   real_action,
                                                                   real_observation.for_obj(objid),
@@ -316,7 +316,7 @@ def solve(problem,
             viz.on_render()
 
         if isinstance(real_action, PickAction) or isinstance(real_action, FindAction):
-            ic (problem.agent.policy_model.get_all_actions())
+            ic (problem.agent.policy_model.get_all_actions(problem.agent.sample_belief(),problem.agent.history))
 
         # Termination check
         if set(problem.env.state.object_states[robot_id].objects_found)\

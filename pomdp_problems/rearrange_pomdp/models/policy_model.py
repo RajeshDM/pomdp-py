@@ -46,8 +46,9 @@ class PolicyModel(pomdp_py.RolloutPolicy):
         if can_pick :
             for obj, obj_instance in state.object_states.items():
                 if isinstance(obj_instance, ManipObjectState):
-                    if obj_instance.is_held is False :
-                        pick_actions.add(PickAction(obj_instance.objid))
+                    if obj in set(state.object_states[robot_id].objects_found) :
+                        if obj_instance.is_held is False :
+                            pick_actions.add(PickAction(obj_instance.objid))
 
                     # TODO - p.1 
                     # Will ADD this back when put down action is implemented

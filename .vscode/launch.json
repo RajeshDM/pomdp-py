@@ -16,7 +16,7 @@
             "name": "rearrange_pomdp_main",
             "type": "python",
             "request": "launch",
-            "program": "/Users/rajesh/Rajesh/Subjects/Research/rearrangement_pomdp/pomdp-py/pomdp_problems/rearrange_pomdp/manip_problem.py",
+            "program": "/home/rajesh/rajesh/pomdp/full_repo_pomdp_py/rearrange_pomdp/pomdp-py/pomdp_problems/rearrange_pomdp/manip_problem.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }

@@ -132,7 +132,10 @@ def _initialize_histogram_belief_manip(dim, robot_id, object_ids, prior, robot_o
                 for x in range(width):
                     for y in range(length):
                         state = ManipObjectState(objid, "target", (x,y), other_attr)
-                        hist[state] = 1.0
+                        if is_held is True :
+                            hist[state] = 1e-9
+                        else :
+                            hist[state] = 1.0
                         total_prob += hist[state]
 
         # Normalize

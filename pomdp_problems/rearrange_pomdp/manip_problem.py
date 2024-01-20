@@ -180,7 +180,7 @@ def belief_update_manip(agent, real_action, real_observation, next_robot_state, 
                     next_state_space = set({})
                     for state in belief_obj:
                         next_state_belief = agent.transition_model[objid].sample(state,real_action,next_robot_state)
-                        next_state_space = next_state_space.update(next_state_belief)
+                        next_state_space.update(next_state_belief)
                     new_belief = pomdp_py.update_histogram_belief(belief_obj,
                                                                   real_action,
                                                                   real_observation.for_obj(objid),

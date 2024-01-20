@@ -189,6 +189,7 @@ def belief_update_manip(agent, real_action, real_observation, next_robot_state, 
                                                                   # The agent knows the objects are static for now.
                                                                   static_transition=True,
                                                                   oargs={"next_robot_state": next_robot_state},
+                                                                  targs={"robot_state": next_robot_state},
                                                                   next_state_space=next_state_space)
             else:
                 raise ValueError("Unexpected program state."\
@@ -273,7 +274,7 @@ def solve(problem,
         # Updates
         problem.agent.clear_history()  # truncate history
         problem.agent.update_history(real_action, real_observation)
-        belief_update(problem.agent, real_action, real_observation,
+        belief_update_manip(problem.agent, real_action, real_observation,
                       problem.env.state.object_states[robot_id],
                       planner)
         _time_used += time.time() - _start

@@ -17,6 +17,10 @@ from pomdp_problems.rearrange_pomdp.domain.observation import *
 from pomdp_problems.rearrange_pomdp.domain.action import *
 from pomdp_problems.rearrange_pomdp.models.utils import get_robot_state_from_full_state
 
+
+ADD = True
+REMOVE = False
+
 ####### Transition Model #######
 class MosTransitionModel(pomdp_py.OOTransitionModel):
     """Object-oriented transition model; The transition model supports the
@@ -119,17 +123,30 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
             robot_state = get_robot_state_from_full_state(state) 
             #state = copy.deepcopy(state.object_states[self._objid])
 
-        if isinstance(action, PickAction):
+        if isinstance(action, PickAction) and len(robot_state.holding) < robot_state.carry_cap:
             p_succ = self.get_pick_action_success_prob(new_state,robot_state)
 
-            if action.obj_id != self._objid :
+            if action.objid != self._objid :
                 return new_state
 
             curr_prob = random.uniform(0,1)
             if curr_prob <= p_succ : 
                 new_state.is_held = True
                 #This might cause some valid pose issue - check it out
-                #new_state.pose = (-1000,-1000)
+                #new_state.pose = (-new_state.objid,-new_state.objid)
+
+        if isinstance(action,PlaceAction):
+            #Currently for just one object
+            if self._objid == robot_state.holding[0]:
+                new_state.is_held = False
+                p_succ = self.get_place_action_success_prob(new_state,robot_state)
+                curr_prob = random.uniform(0,1)
+
+                if curr_prob <= p_succ : 
+                    obj_new_pose = robot_state.pose
+                    #if camera_direction:
+                    #    pass
+
 
         return new_state
 
@@ -144,6 +161,9 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
         #Need to check if the object is actually 
         #even visible from where the agent is
         return 1 - self._epsilon
+
+    def get_place_action_success_prob(self,object_state, robot_state):
+        return 1-self._epsilon
 
 ####### Transition Model #######
 class ManipTransitionModel(pomdp_py.OOTransitionModel):
@@ -286,16 +306,24 @@ class ManipRobotTransitionModel(pomdp_py.TransitionModel):
             next_robot_state["objects_found"] = tuple(set(next_robot_state['objects_found'])\
                                                       | set(observed_target_objects))
         elif isinstance(action, PickAction):
+            '''
             #Do no change to robot if pick action is executed - This is for current 
             #pick POMDP only - which can hold n objects. later this will change
-            next_robot_state["objects_picked"] = 0
+            '''
+            next_robot_state.objects_picked = 0
             for objs, obj_instance in state.object_states.items():
                 if isinstance(obj_instance, ManipRobotState):
                     continue
                 if obj_instance.is_held == True :
-                    #print ("Updating objects picked")
-                    next_robot_state["objects_picked"] += 1 
-            pass
+                    next_robot_state.objects_picked += 1 
+
+            if robot_state.objects_picked == next_robot_state.objects_picked -1 :
+                    next_robot_state.holding = (action.objid, ADD)
+
+        elif isinstance(action,PlaceAction):
+            if len(robot_state.holding) > 0 :
+                next_robot_state.holding = (robot_state.holding[0],REMOVE)
+
         return next_robot_state
     
     def sample(self, state, action):

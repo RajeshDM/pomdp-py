@@ -91,11 +91,15 @@ class MotionAction(Action):
             motion_name = str(motion)
         super().__init__("move-%s-%s" % (scheme, motion_name))
 
-
 class PickAction(Action):
-    def __init__(self, obj_id):
-        super().__init__("pick" + "_" +str(obj_id))
-        self.obj_id = obj_id
+    def __init__(self, objid):
+        super().__init__("pick" + "_" +str(objid))
+        self.objid = objid
+
+class PlaceAction(Action):
+    def __init__(self):
+        super().__init__("place")
+
         
 # Define some constant actions
 MoveEast = MotionAction(MotionAction.EAST,   scheme=MotionAction.SCHEME_XYTH, motion_name="East")

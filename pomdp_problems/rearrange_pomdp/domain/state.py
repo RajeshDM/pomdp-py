@@ -80,11 +80,12 @@ class ManipRobotState(pomdp_py.ObjectState):
                                    "objects_found": objects_found,
                                    "camera_direction": camera_direction,
                                    "objects_picked" : 0, 
-                                   "is_holding": False})
+                                   "holding": [],
+                                   "carry_cap": 5})
     def __str__(self):
-        return 'ManipRobotState(%s,%s|%s|%s|%s)' % (str(self.objclass), str(self.pose), \
+        return 'ManipRobotState(%s,%s|%s|%s|%s|%s)' % (str(self.objclass), str(self.pose), \
                                          str(self.objects_found), str(self.objects_picked),\
-                                        str(self.is_holding))
+                                        str(self.holding), str(self.carry_cap))
     def __repr__(self):
         return str(self)
     @property
@@ -105,16 +106,30 @@ class ManipRobotState(pomdp_py.ObjectState):
     @property
     def objects_picked(self):
         return self.attributes['objects_picked']
+    @objects_picked.setter
+    def objects_picked(self,value):
+        self.attributes['objects_picked'] = value
     @property
     def camera_direction(self):
         return self.attributes['camera_direction']
+    
+    @property
+    def carry_cap(self):
+        return self.attributes['carry_cap']
 
     # Added this property but not using it atm - 
     # It is being currently determined if any of the objects are being held
     @property
-    def is_holding(self):
-        return self.attributes['is_holding']
-    
+    def holding(self):
+        return self.attributes['holding']
+    @holding.setter
+    def holding(self, value):
+        objid = value[0]
+        add = value[1]
+        if value[1] is True :
+            self.attributes['holding'].append(objid)
+        elif len(self.attributes['holding']) > 0 :
+            self.attributes['holding'].remove(objid)
 
 class MosOOState(pomdp_py.OOState):
     def __init__(self, object_states):

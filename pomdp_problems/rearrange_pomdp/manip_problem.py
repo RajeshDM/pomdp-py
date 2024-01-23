@@ -315,8 +315,8 @@ def solve(problem,
             viz.on_loop()
             viz.on_render()
 
-        if isinstance(real_action, PickAction) or isinstance(real_action, FindAction):
-            ic (problem.agent.policy_model.get_all_actions(problem.agent.sample_belief(),problem.agent.history))
+        #if isinstance(real_action, PickAction) or isinstance(real_action, FindAction):
+        #    ic (problem.agent.policy_model.get_all_actions(problem.agent.sample_belief(),problem.agent.history))
 
         # Termination check
         if set(problem.env.state.object_states[robot_id].objects_found)\

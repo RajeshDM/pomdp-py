@@ -170,7 +170,6 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         return ObjectObservation(self._objid, zi)
 
     def _sample_zi(self, event, next_state, argmax=False):
-        random.seed(125)
         if event == "A":
             object_true_pose = next_state.object_pose(self._objid)
             gaussian =  Gaussian(list(object_true_pose),
@@ -186,8 +185,12 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             # TODO: FIX. zi should ONLY come from the field of view.
             # There is currently no easy way to sample from the field of view.
             width, height = self._dim
-            zi = (random.randint(0, width),   # x axis
-                  random.randint(0, height))  # y axis
+            random.seed(125)
+            x = random.randint(0, width)
+            y = random.randint(0, height)
+            #zi = (random.randint(0, width),   # x axis
+            #      random.randint(0, height))  # y axis
+            zi = (x,y)
         else: # event == C
             zi = ObjectObservation.NULL
         return zi

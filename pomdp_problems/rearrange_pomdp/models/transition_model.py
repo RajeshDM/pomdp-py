@@ -112,6 +112,7 @@ class ManipObjectTransitionModel(pomdp_py.TransitionModel):
         """ TODO a.1: Need to take care of applying pick action 
         in the wrong state somewhere - looks like it is here itself so"""
         #new_state = copy.deepcopy(state.object_states[self._objid])
+        random.seed(10)
         if isinstance(state,ManipObjectState) :
             new_state = copy.deepcopy(state)
         else :

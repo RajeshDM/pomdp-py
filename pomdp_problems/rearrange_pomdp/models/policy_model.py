@@ -18,6 +18,7 @@ class PolicyModel(pomdp_py.RolloutPolicy):
         self._grid_map = grid_map
 
     def sample(self, state, **kwargs):
+        random.seed(10)
         return random.sample(self._get_all_actions(**kwargs), 1)[0]
     
     def probability(self, action, state, **kwargs):
@@ -66,6 +67,10 @@ class PolicyModel(pomdp_py.RolloutPolicy):
         available_actions = {Look} | find_action | pick_actions
         #available_actions = {Look} | find_action 
 
+        for action in pick_actions:
+            if action.obj_id == 11  and len(history) <2:
+                print ("Obj ID")
+
         if state is None :
             available_actions = available_actions | ALL_MOTION_ACTIONS
         else: 
@@ -80,5 +85,6 @@ class PolicyModel(pomdp_py.RolloutPolicy):
 
         return available_actions
 
-    def rollout(self, state, history=None):
+    def rollout(self, state, history=None,seed=10):
+        random.seed(seed)
         return random.sample(self.get_all_actions(state=state, history=history), 1)[0]

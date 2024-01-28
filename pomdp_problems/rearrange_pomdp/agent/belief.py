@@ -13,6 +13,7 @@ import pomdp_py
 import random
 import copy
 from ..domain.state import *
+from pomdp_problems.rearrange_pomdp.algorithm.histogram import Histogram
 
 class MosOOBelief(pomdp_py.OOBelief):
     """This is needed to make sure the belief is sampling the right
@@ -96,7 +97,7 @@ def _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orienta
         for state in hist:
             hist[state] /= total_prob
 
-        hist_belief = pomdp_py.Histogram(hist)
+        hist_belief = Histogram(hist)
         oo_hists[objid] = hist_belief
 
     # For the robot, we assume it can observe its own state;
@@ -104,7 +105,7 @@ def _initialize_histogram_belief(dim, robot_id, object_ids, prior, robot_orienta
     assert robot_id in prior, "Missing initial robot pose in prior."
     init_robot_pose = list(prior[robot_id].keys())[0]
     oo_hists[robot_id] =\
-        pomdp_py.Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
+        Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
         
     return MosOOBelief(robot_id, oo_hists)
 
@@ -142,7 +143,7 @@ def _initialize_histogram_belief_manip(dim, robot_id, object_ids, prior, robot_o
         for state in hist:
             hist[state] /= total_prob
 
-        hist_belief = pomdp_py.Histogram(hist)
+        hist_belief = Histogram(hist)
         oo_hists[objid] = hist_belief
 
     # For the robot, we assume it can observe its own state;
@@ -150,7 +151,7 @@ def _initialize_histogram_belief_manip(dim, robot_id, object_ids, prior, robot_o
     assert robot_id in prior, "Missing initial robot pose in prior."
     init_robot_pose = list(prior[robot_id].keys())[0]
     oo_hists[robot_id] =\
-        pomdp_py.Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
+        Histogram({ManipRobotState(robot_id, init_robot_pose, (), None): 1.0})
         
     return MosOOBelief(robot_id, oo_hists)
 
@@ -172,6 +173,7 @@ def _initialize_particles_belief(dim, robot_id, object_ids, prior,
     # Its pose must have been provided in the `prior`.
     assert robot_id in prior, "Missing initial robot pose in prior."
     init_robot_pose = list(prior[robot_id].keys())[0]
+    random.seed(10)
     
     oo_particles = {}  # objid -> Particageles
     width, length = dim

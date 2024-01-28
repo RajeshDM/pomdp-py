@@ -88,8 +88,8 @@ You can obtain the currently preferred action sequence by:
 To explore more features, browse the list of methods in the documentation.
 """
 import sys
-from pomdp_py.algorithms.po_uct import TreeNode, QNode, VNode, RootVNode
-#from pomdp_problems.rearrange_pomdp.algorithm.po_uct import TreeNode,QNode,VNode,RootVNode
+#from pomdp_py.algorithms.po_uct import TreeNode, QNode, VNode, RootVNode
+from pomdp_problems.rearrange_pomdp.algorithm.nodes import TreeNode,QNode,VNode,RootVNode
 
 from pomdp_py.utils import typ, similar, special_char
 

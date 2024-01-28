@@ -9,6 +9,8 @@ from pomdp_problems.rearrange_pomdp.agent.agent import *
 from pomdp_problems.rearrange_pomdp.example_worlds import *
 from pomdp_problems.rearrange_pomdp.domain.observation import *
 from pomdp_problems.rearrange_pomdp.models.components.grid_map import *
+from pomdp_problems.rearrange_pomdp.algorithm.po_uct import POUCT
+from pomdp_problems.rearrange_pomdp.algorithm.histogram import Histogram,update_histogram_belief
 import argparse
 import time
 import random
@@ -115,10 +117,10 @@ def belief_update(agent, real_action, real_observation, next_robot_state, planne
         # Update belief for every object
         for objid in agent.cur_belief.object_beliefs:
             belief_obj = agent.cur_belief.object_belief(objid)
-            if isinstance(belief_obj, pomdp_py.Histogram):
+            if isinstance(belief_obj, Histogram):
                 if objid == agent.robot_id:
                     # Assuming the agent can observe its own state:
-                    new_belief = pomdp_py.Histogram({next_robot_state: 1.0})
+                    new_belief = Histogram({next_robot_state: 1.0})
                 else:
                     # This is doing
                     #    B(si') = normalizer * O(oi|si',sr',a) * sum_s T(si'|s,a)*B(si)
@@ -147,7 +149,7 @@ def belief_update(agent, real_action, real_observation, next_robot_state, planne
                     # observation model from O(oi|s',a) to O(label_i|s',a) and
                     # it becomes easy to define O(label_i=i|s',a) and O(label_i=FREE|s',a).
                     # These ideas are used in my recent 3D object search work.
-                    new_belief = pomdp_py.update_histogram_belief(belief_obj,
+                    new_belief = update_histogram_belief(belief_obj,
                                                                   real_action,
                                                                   real_observation.for_obj(objid),
                                                                   agent.observation_model[objid],
@@ -172,16 +174,16 @@ def belief_update_manip(agent, real_action, real_observation, next_robot_state, 
         # Update belief for every object
         for objid in agent.cur_belief.object_beliefs:
             belief_obj = agent.cur_belief.object_belief(objid)
-            if isinstance(belief_obj, pomdp_py.Histogram):
+            if isinstance(belief_obj, Histogram):
                 if objid == agent.robot_id:
                     # Assuming the agent can observe its own state:
-                    new_belief = pomdp_py.Histogram({next_robot_state: 1.0})
+                    new_belief = Histogram({next_robot_state: 1.0})
                 else:
                     next_state_space = set({})
                     for state in belief_obj:
                         next_state_belief = agent.transition_model[objid].sample(state,real_action,next_robot_state)
                         next_state_space.update(set({next_state_belief}))
-                    new_belief = pomdp_py.update_histogram_belief(belief_obj,
+                    new_belief = update_histogram_belief(belief_obj,
                                                                   real_action,
                                                                   real_observation.for_obj(objid),
                                                                   agent.observation_model[objid],
@@ -217,17 +219,19 @@ def solve(problem,
         visualize (bool) if True, show the pygame visualization.
     """
 
+    random.seed(10)
     random_objid = random.sample(problem.env.target_objects, 1)[0]
     random_object_belief = problem.agent.belief.object_beliefs[random_objid]
-    if isinstance(random_object_belief, pomdp_py.Histogram):
+    if isinstance(random_object_belief, Histogram):
         # Use POUCT
-        planner = pomdp_py.POUCT(max_depth=max_depth,
+        #planner = pomdp_py.POUCT(max_depth=max_depth,
+        planner = POUCT(max_depth=max_depth,
                                  discount_factor=discount_factor,
                                  planning_time=planning_time,
                                  exploration_const=exploration_const,
                                  rollout_policy=problem.agent.policy_model,
-                                )  # Random by default
-                                #num_sims=500)
+                                #)  # Random by default
+                                num_sims=300)
     elif isinstance(random_object_belief, pomdp_py.Particles):
         # Use POMCP
         planner = pomdp_py.POMCP(max_depth=max_depth,
@@ -262,6 +266,9 @@ def solve(problem,
         if _time_used > max_time:
             break  # no more time to update.
 
+        if isinstance(real_action, PickAction) and real_action.obj_id not in problem.env.state.object_states[robot_id].objects_found:
+            ic ("Should not be happening - manip problem")
+
         # Execute action
         reward = problem.env.state_transition(real_action, execute=True,
                                               robot_id=robot_id)
@@ -295,7 +302,7 @@ def solve(problem,
 
         ic (problem.env.state.object_states[robot_id]['objects_picked'])
 
-        if isinstance(planner, pomdp_py.POUCT):
+        if isinstance(planner, POUCT):
             print("__num_sims__: %d" % planner.last_num_sims)
 
         if visualize:
@@ -358,7 +365,7 @@ def unittest():
           exploration_const=1000,
           #visualize=True,
           visualize=False,
-          max_time=120,
+          max_time=12000,
           max_steps=5000)
 
 

@@ -24,6 +24,7 @@ import numpy as np
 from pomdp_problems.rearrange_pomdp.domain.state import *
 from pomdp_problems.rearrange_pomdp.domain.action import *
 from pomdp_problems.rearrange_pomdp.domain.observation import *
+from pomdp_problems.rearrange_pomdp.algorithm.gaussian import Gaussian
 
 #### Observation Models ####
 class MosObservationModel(pomdp_py.OOObservationModel):
@@ -124,7 +125,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
             # This has 0.0 probability.
             prob += 0.0 * alpha
         else:
-            gaussian = pomdp_py.Gaussian(list(object_pose),
+            gaussian = Gaussian(list(object_pose),
                                          [[self.sigma**2, 0],
                                           [0, self.sigma**2]])
             prob += gaussian[zi] * alpha
@@ -151,6 +152,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         alpha, beta, gamma = self._compute_params(self._sensor.within_range(robot_pose, object_pose))
 
         # Requires Python >= 3.6
+        random.seed(10)
         event_occured = random.choices(["A", "B", "C"], weights=[alpha, beta, gamma], k=1)[0]
         zi = self._sample_zi(event_occured, next_state)
 
@@ -168,9 +170,10 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         return ObjectObservation(self._objid, zi)
 
     def _sample_zi(self, event, next_state, argmax=False):
+        random.seed(10)
         if event == "A":
             object_true_pose = next_state.object_pose(self._objid)
-            gaussian =  pomdp_py.Gaussian(list(object_true_pose),
+            gaussian =  Gaussian(list(object_true_pose),
                                           [[self.sigma**2, 0],
                                            [0, self.sigma**2]])
             if not argmax:

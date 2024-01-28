@@ -72,9 +72,8 @@ class Histogram(GenerativeDistribution):
         for value in candidates:
             prob_dist.append(self._histogram[value])
 
-        np.random.seed(10)
-        #if rnd == rand:
-        rnd.seed(10)
+        np.random.seed(14)
+        rnd.seed(13)
         if sys.version_info[0] >= 3 and sys.version_info[1] >= 6:
             # available in Python 3.6+
             return rnd.choices(candidates, weights=prob_dist, k=1)[0]

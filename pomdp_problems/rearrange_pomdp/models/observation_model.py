@@ -151,8 +151,8 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         # Obtain observation according to distribution.
         alpha, beta, gamma = self._compute_params(self._sensor.within_range(robot_pose, object_pose))
 
+        random.seed(120)
         # Requires Python >= 3.6
-        random.seed(10)
         event_occured = random.choices(["A", "B", "C"], weights=[alpha, beta, gamma], k=1)[0]
         zi = self._sample_zi(event_occured, next_state)
 
@@ -170,7 +170,7 @@ class ObjectObservationModel(pomdp_py.ObservationModel):
         return ObjectObservation(self._objid, zi)
 
     def _sample_zi(self, event, next_state, argmax=False):
-        random.seed(10)
+        random.seed(125)
         if event == "A":
             object_true_pose = next_state.object_pose(self._objid)
             gaussian =  Gaussian(list(object_true_pose),

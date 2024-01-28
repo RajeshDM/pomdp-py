@@ -83,7 +83,7 @@ class Gaussian(GenerativeDistribution):
     def random(self, n=1):
         """random(self, n=1)"""
         d = len(self._mean)
-        np.random.seed(10)
+        np.random.seed(35)
         Xstd = np.random.randn(n, d)
         X = np.dot(Xstd, sqrtm(self._cov)) + self._mean
         if n == 1:

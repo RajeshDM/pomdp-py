@@ -18,7 +18,7 @@ class PolicyModel(pomdp_py.RolloutPolicy):
         self._grid_map = grid_map
 
     def sample(self, state, **kwargs):
-        random.seed(10)
+        random.seed(26)
         return random.sample(self._get_all_actions(**kwargs), 1)[0]
     
     def probability(self, action, state, **kwargs):
@@ -85,6 +85,7 @@ class PolicyModel(pomdp_py.RolloutPolicy):
 
         return available_actions
 
-    def rollout(self, state, history=None,seed=10):
+    def rollout(self, state, history=None):
+        seed = 6
         random.seed(seed)
         return random.sample(self.get_all_actions(state=state, history=history), 1)[0]

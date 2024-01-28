@@ -49,7 +49,7 @@ class RandomRollout(RolloutPolicy):
     possible actions."""
     def rollout(self,state,history):
         """rollout(self, State state, tuple history=None)"""
-        random.seed(10)
+        random.seed(15)
         return random.sample(self.get_all_actions(state=state, history=history), 1)[0]
 
 class POUCT(Planner):
@@ -152,7 +152,6 @@ class POUCT(Planner):
                 agent.tree[real_action][real_observation],
                 agent.history)
             dd = TreeDebugger(agent.tree)
-            ic ("updating tree")
 
         else:
             raise ValueError("Unexpected state; child should not be None")
@@ -252,7 +251,8 @@ class POUCT(Planner):
         action = self._ucb(root)
         robot_id = -114
         if isinstance(action, PickAction)  and action.obj_id not in state.object_states[robot_id].objects_found:
-            ic ("Should not be happening - PO_UCT")
+            ic ("Should not be happening - PO_UCT", action)
+            exit()
         next_state, observation, reward, nsteps = sample_generative_model(self._agent, state, action)
         if nsteps == 0:
             # This indicates the provided action didn't lead to transition
